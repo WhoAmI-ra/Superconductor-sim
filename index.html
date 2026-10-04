@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superconductor Lab – Ch. 9 Group 5</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --ink:#18212f; --muted:#5b6678; --line:#d5dbe6;
+    --accent:#1f5fbf; --sc:#0e9f6e; --hot:#e0502b; --warn:#b7791f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0f141c; --card:#171e29; --ink:#e8edf5; --muted:#9aa6ba; --line:#2a3445;
+           --accent:#5b9bff; --sc:#34d399; --hot:#ff7a55; --warn:#e0b050; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:22px 20px 8px;max-width:1100px;margin:0 auto}
+  h1{margin:0 0 4px;font-size:1.5rem}
+  header p{margin:0;color:var(--muted)}
+  main{max-width:1100px;margin:0 auto;padding:12px 20px 40px;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{margin:0 0 4px;font-size:1.05rem}
+  .card .sub{margin:0 0 12px;color:var(--muted);font-size:.9rem}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+  select,input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:120px}
+  input[type=range]{width:100%}
+  button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr}}
+  canvas{width:100%;display:block;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .stat b{display:block;font-size:1.15rem}
+  .stat span{font-size:.78rem;color:var(--muted)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-weight:600;font-size:.85rem}
+  .badge.sc{background:color-mix(in srgb,var(--sc) 20%,transparent);color:var(--sc)}
+  .badge.nm{background:color-mix(in srgb,var(--hot) 18%,transparent);color:var(--hot)}
+  .note{font-size:.82rem;color:var(--muted);margin-top:10px}
+  code{background:var(--bg);padding:1px 5px;border-radius:5px}
+  footer{max-width:1100px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.8rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Superconductor Lab</h1>
+  <p>Chapter 9: Current and Resistance · Group 5 · Section 9.6 and synthesis. Cool a wire, watch R drop to zero, and see what that does to Joule heating and magnets.</p>
+</header>
+
+<main>
+  <!-- Controls -->
+  <section class="card">
+    <h2>1. Set up your wire</h2>
+    <p class="sub">These settings feed every panel below.</p>
+    <div class="row">
+      <label>Material
+        <select id="mat"></select>
+      </label>
+      <label>Length L (m)
+        <input type="number" id="L" value="1000" min="1" step="10">
+      </label>
+      <label>Cross-section A (cm²)
+        <input type="number" id="A" value="1" min="0.01" step="0.1">
+      </label>
+      <label>Current I (A)
+        <input type="number" id="I" value="500" min="0" step="10">
+      </label>
+    </div>
+    <div style="margin-top:14px">
+      <label>Temperature T: <b id="Tlabel" style="color:var(--ink)"></b>
+        <input type="range" id="Tslider" min="0" max="1000" value="1000">
+      </label>
+      <div class="row" style="margin-top:8px">
+        <button data-T="4.2">Liquid helium (4.2 K)</button>
+        <button data-T="77">Liquid nitrogen (77 K)</button>
+        <button data-T="293">Room temp (293 K)</button>
+        <span id="state" class="badge"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel 1: R vs T + wire -->
+  <section class="card">
+    <h2>2. Resistance versus temperature</h2>
+    <p class="sub">Normal-state metals follow ρ = ρ₀[1 + α(T − T₀)]; a superconductor drops to ρ = 0 at T<sub>c</sub>. The slider uses a square-root scale so low temperatures are easy to explore.</p>
+    <div class="grid2">
+      <canvas id="chart" width="560" height="320"></canvas>
+      <canvas id="wire" width="560" height="320"></canvas>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Resistivity ρ</span><b id="sRho">–</b></div>
+      <div class="stat"><span>Resistance R = ρL/A</span><b id="sR">–</b></div>
+      <div class="stat"><span>Voltage drop V = IR</span><b id="sV">–</b></div>
+      <div class="stat"><span>Power P = I²R</span><b id="sP">–</b></div>
+    </div>
+    <p class="note">Wire animation: dots are charge carriers drifting with the current. More scattering (a larger ρ) makes them jitter and heat the lattice; at R = 0 they move cleanly.</p>
+  </section>
+
+  <!-- Panel 2: Energy comparison -->
+  <section class="card">
+    <h2>3. Joule heating: your wire vs. copper at room temperature</h2>
+    <p class="sub">Same wire size and current. Energy per day is converted to kWh, as on an electricity bill.</p>
+    <canvas id="bars" width="1000" height="200" style="aspect-ratio:1000/200"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Copper at 293 K: P</span><b id="cuP">–</b></div>
+      <div class="stat"><span>Copper energy per day</span><b id="cuE">–</b></div>
+      <div class="stat"><span>Your wire now: P</span><b id="myP">–</b></div>
+      <div class="stat"><span>Your wire energy per day</span><b id="myE">–</b></div>
+    </div>
+    <p class="note">Try the defaults (1000 m, 1 cm², 500 A): copper gives R ≈ 0.168 Ω and P ≈ 42 kW, about 1,008 kWh per day, matching the worked example in the report. The refrigeration needed to keep the superconductor cold is not counted here.</p>
+  </section>
+
+  <!-- Panel 3: Meissner -->
+  <section class="card">
+    <h2>4. Meissner effect: magnetic levitation</h2>
+    <p class="sub">Below T<sub>c</sub> the superconductor expels the magnet's field, so the magnet floats. Warm it above T<sub>c</sub> (use the slider) and it loses levitation. Only works when a superconducting material is selected.</p>
+    <canvas id="meissner" width="1000" height="240" style="aspect-ratio:1000/240"></canvas>
+    <p class="note">Field lines bend around the superconductor because B inside it is zero. This is a qualitative picture, not a force calculation. Real Maglev trains use superconducting magnets aboard the train with guideway coils.</p>
+  </section>
+  <!-- Panel 5: Meissner vs perfect conductor -->
+  <section class="card">
+    <h2>5. Meissner effect vs. a "perfect conductor"</h2>
+    <p class="sub">Is a superconductor just a material with R = 0? Test it. Apply a magnetic field and compare a superconductor with a hypothetical perfect conductor (R = 0 only). Uses the material and temperature chosen in part 1.</p>
+    <div class="row">
+      <label>Order of events
+        <select id="order">
+          <option value="after">Cool first, then apply field</option>
+          <option value="before">Apply field first, then cool</option>
+        </select>
+      </label>
+      <label style="flex:1;min-width:220px">Applied field B: <b id="Blabel" style="color:var(--ink)"></b>
+        <input type="range" id="Bslider" min="0" max="150" value="40">
+      </label>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div><canvas id="fieldSC" width="500" height="260"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Real superconductor: B inside</span><b id="bScIn">–</b></div><div class="stat"><span>Surface currents</span><b id="scCur">–</b></div></div></div>
+      <div><canvas id="fieldPC" width="500" height="260"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Perfect conductor (R = 0 only): B inside</span><b id="bPcIn">–</b></div><div class="stat"><span>Critical field B<sub>c</sub>(T)</span><b id="bcNow">–</b></div></div></div>
+    </div>
+    <p class="note" id="meissExplain"></p>
+    <p class="note">Key idea: with R = 0 alone, induced currents can only <i>oppose changes</i> in flux (Lenz's law), so a perfect conductor keeps whatever flux was inside when it was cooled. A superconductor actively expels the field whatever the order, which is the Meissner effect. B<sub>c</sub>(T) ≈ B<sub>c0</sub>[1 − (T/T<sub>c</sub>)²] is a standard approximation; B<sub>c0</sub> values here are illustrative (upper critical field for NbTi and YBCO).</p>
+  </section>
+</main>
+
+<footer>
+  Material values are illustrative. Copper uses OpenStax table values (ρ₀ = 1.68×10⁻⁸ Ω·m at 20 °C, α = 3.9×10⁻³ /°C); other normal-state values are rough approximations for demonstration. T<sub>c</sub>: mercury ≈ 4.15 K, NbTi ≈ 9.2 K, YBCO ≈ 92 K.
+  Reference: Ling, S. J., Sanny, J., &amp; Moebs, W. (2016). <i>University physics volume 2</i>. OpenStax. https://openstax.org/books/university-physics-volume-2
+</footer>
+
+<script>
+(() => {
+  // ---------- Material data ----------
+  // rho0: resistivity at T0=293 K (ohm·m); alpha: 1/K; Tc: critical temp (null = not superconducting)
+  const MATS = {
+    cu:   {name:"Copper (ordinary metal)",        rho0:1.68e-8, alpha:3.9e-3,  Tc:null},
+    hg:   {name:"Mercury (Tc ≈ 4.15 K)",          rho0:9.6e-7,  alpha:0.9e-3,  Tc:4.15, Bc0:0.041},
+    nbti: {name:"Niobium–titanium (Tc ≈ 9.2 K)",  rho0:6.0e-7,  alpha:0.3e-3,  Tc:9.2, Bc0:14},
+    ybco: {name:"YBCO ceramic (Tc ≈ 92 K)",       rho0:4.0e-6,  alpha:1.0e-3,  Tc:92, Bc0:100}
+  };
+  const T0 = 293, TMIN = 1, TMAX = 300, RESID = 0.02; // residual fraction of rho0 at very low T
+  const $ = id => document.getElementById(id);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  const sel = $("mat");
+  for (const k in MATS){ const o=document.createElement("option"); o.value=k; o.textContent=MATS[k].name; sel.appendChild(o); }
+  sel.value = "nbti";
+
+  let T = 4.2;
+  const sToT = s => TMIN + (TMAX-TMIN) * Math.pow(s/1000, 2);
+  const tToS = t => 1000 * Math.sqrt((t-TMIN)/(TMAX-TMIN));
+
+  function normalRho(m, t){
+    const r = m.rho0 * (1 + m.alpha*(t - T0));
+    return Math.max(r, m.rho0*RESID);
+  }
+  function rho(m, t){
+    if (m.Tc !== null && t < m.Tc) return 0;
+    return normalRho(m, t);
+  }
+  const isSC = (m,t) => m.Tc !== null && t < m.Tc;
+
+  function getWire(){
+    return {L: Math.max(+$("L").value||0,0), A: Math.max((+$("A").value||0.0001)*1e-4,1e-9), I: Math.max(+$("I").value||0,0)};
+  }
+  function fmt(x, unit){
+    if (x === 0) return "0 " + unit;
+    const pre = [[1e9,"G"],[1e6,"M"],[1e3,"k"],[1,""],[1e-3,"m"],[1e-6,"µ"],[1e-9,"n"]];
+    for (const [f,p] of pre){ if (Math.abs(x) >= f) return (x/f).toPrecision(3) + " " + p + unit; }
+    return x.toExponential(2) + " " + unit;
+  }
+  const kwh = (P) => P*24/1000;
+
+  // ---------- Canvas helpers ----------
+  function fit(c){
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const w = c.clientWidth, h = c.clientHeight || (c.height/c.width*w);
+    if (c.width !== Math.round(w*dpr) || c.height !== Math.round(h*dpr)){
+      c.width = Math.round(w*dpr); c.height = Math.round(h*dpr);
+    }
+    const g = c.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+    return {g, w, h};
+  }
+
+  // ---------- Chart R vs T ----------
+  function drawChart(){
+    const {g,w,h} = fit($("chart"));
+    const m = MATS[sel.value], wr = getWire();
+    g.clearRect(0,0,w,h);
+    const pad = {l:58,r:14,t:16,b:40};
+    const pw = w-pad.l-pad.r, ph = h-pad.t-pad.b;
+    const Rof = t => rho(m,t)*wr.L/wr.A;
+    let Rmax = 0;
+    for (let t=TMIN;t<=TMAX;t+=1) Rmax = Math.max(Rmax, normalRho(m,t)*wr.L/wr.A);
+    Rmax = Rmax || 1;
+    const X = t => pad.l + pw*Math.sqrt((t-TMIN)/(TMAX-TMIN));
+    const Y = r => pad.t + ph*(1 - r/Rmax);
+
+    g.strokeStyle = css("--line"); g.fillStyle = css("--muted"); g.lineWidth = 1;
+    g.font = "11px system-ui"; g.textAlign = "right";
+    for (let i=0;i<=4;i++){
+      const r = Rmax*i/4, y = Y(r);
+      g.beginPath(); g.moveTo(pad.l,y); g.lineTo(w-pad.r,y); g.stroke();
+      g.fillText(fmt(r,"Ω"), pad.l-6, y+4);
+    }
+    g.textAlign = "center";
+    [1,10,50,100,200,300].forEach(t=>{
+      const x = X(t); g.beginPath(); g.moveTo(x,pad.t+ph); g.lineTo(x,pad.t+ph+4); g.stroke();
+      g.fillText(t, x, pad.t+ph+16);
+    });
+    g.fillText("Temperature T (K)", pad.l+pw/2, h-6);
+    g.save(); g.translate(12, pad.t+ph/2); g.rotate(-Math.PI/2); g.fillText("Resistance R", 0, 0); g.restore();
+
+    // Tc marker
+    if (m.Tc !== null){
+      const x = X(m.Tc);
+      g.setLineDash([4,4]); g.strokeStyle = css("--sc"); g.beginPath(); g.moveTo(x,pad.t); g.lineTo(x,pad.t+ph); g.stroke(); g.setLineDash([]);
+      g.fillStyle = css("--sc"); g.textAlign="left"; g.fillText("Tc = "+m.Tc+" K", x+4, pad.t+12);
+    }
+    // curve
+    g.strokeStyle = css("--accent"); g.lineWidth = 2.4; g.beginPath();
+    let started = false, prev = null;
+    for (let t=TMIN;t<=TMAX;t+=0.25){
+      const r = Rof(t), x = X(t), y = Y(r);
+      if (!started){ g.moveTo(x,y); started = true; }
+      else if (prev !== null && Math.abs(r-prev) > Rmax*0.2){ g.lineTo(x,Y(prev)); g.lineTo(x,y); }
+      else g.lineTo(x,y);
+      prev = r;
+    }
+    g.stroke();
+    // current point
+    const cx = X(T), cy = Y(Rof(T));
+    g.fillStyle = isSC(m,T) ? css("--sc") : css("--hot");
+    g.beginPath(); g.arc(cx,cy,6,0,7); g.fill();
+  }
+
+  // ---------- Wire animation ----------
+  const carriers = Array.from({length:70}, () => ({x:Math.random(), y:Math.random(), ph:Math.random()*6.28}));
+  function drawWire(dt){
+    const {g,w,h} = fit($("wire"));
+    const m = MATS[sel.value], wr = getWire();
+    const r = rho(m,T), P = wr.I*wr.I*r*wr.L/wr.A;
+    const sc = isSC(m,T);
+    g.clearRect(0,0,w,h);
+    const x0=24, x1=w-24, y0=h*0.22, y1=h*0.78;
+    // heat glow
+    const heat = Math.min(1, Math.log10(1+P)/5);
+    g.fillStyle = sc ? "rgba(14,159,110,0.15)" : `rgba(224,80,43,${0.12+0.5*heat})`;
+    g.strokeStyle = sc ? css("--sc") : css("--hot"); g.lineWidth = 2;
+    g.beginPath(); g.roundRect(x0,y0,x1-x0,y1-y0,14); g.fill(); g.stroke();
+
+    // lattice ions (vibration ~ T and heat)
+    const amp = sc ? 0.6 : 1 + 4*Math.sqrt(T/300) + 3*heat;
+    g.fillStyle = css("--muted");
+    const t = performance.now()/1000;
+    for (let i=0;i<9;i++) for (let j=0;j<3;j++){
+      const bx = x0 + (i+0.5)*(x1-x0)/9, by = y0 + (j+0.5)*(y1-y0)/3;
+      g.beginPath();
+      g.arc(bx + Math.sin(t*9+i*1.7+j)*amp, by + Math.cos(t*8+i+j*2.3)*amp, 6, 0, 7);
+      g.globalAlpha = 0.35; g.fill(); g.globalAlpha = 1;
+    }
+    // carriers
+    const speed = 0.12 * Math.min(2, 0.3 + wr.I/500);
+    const jit = sc ? 0 : Math.min(9, 1.5 + 14*Math.log10(1 + r/1e-8)/3);
+    g.fillStyle = css("--accent");
+    for (const c of carriers){
+      c.x += speed*dt; if (c.x > 1){ c.x -= 1; c.y = Math.random(); }
+      c.ph += dt*14;
+      const px = x0 + 8 + c.x*(x1-x0-16) + (jit? Math.sin(c.ph*1.3)*jit : 0);
+      const py = y0 + 10 + c.y*(y1-y0-20) + (jit? Math.cos(c.ph)*jit : 0);
+      g.beginPath(); g.arc(px,py,3.2,0,7); g.fill();
+    }
+    // arrow + labels
+    g.fillStyle = css("--ink"); g.font = "12px system-ui"; g.textAlign = "left";
+    g.fillText("conventional current I →", x0, y0-8);
+    g.textAlign = "right";
+    g.fillText(sc ? "R = 0: no scattering, no heating" : "scattering → Joule heating", x1, y1+20);
+  }
+
+  // ---------- Bars ----------
+  function drawBars(){
+    const {g,w,h} = fit($("bars"));
+    const wr = getWire(), m = MATS[sel.value];
+    const Pcu = wr.I*wr.I*normalRho(MATS.cu,T0)*wr.L/wr.A;
+    const Pme = wr.I*wr.I*rho(m,T)*wr.L/wr.A;
+    g.clearRect(0,0,w,h);
+    const max = Math.max(Pcu, Pme, 1);
+    const rows = [["Copper, 293 K", Pcu, css("--hot")], [m.name.split(" (")[0]+", "+T.toFixed(T<10?1:0)+" K", Pme, isSC(m,T)?css("--sc"):css("--warn")]];
+    g.font = "13px system-ui";
+    rows.forEach((r,i)=>{
+      const y = 24 + i*70, bw = Math.max(w-190-300, 60)*r[1]/max;
+      g.fillStyle = css("--ink"); g.textAlign = "left"; g.fillText(r[0], 8, y+22);
+      g.fillStyle = r[2]; g.fillRect(190, y, Math.max(bw,2), 38);
+      g.fillStyle = css("--ink"); g.fillText(fmt(r[1],"W")+"  ("+kwh(r[1]).toLocaleString(undefined,{maximumFractionDigits:1})+" kWh/day)", 190+Math.max(bw,2)+8, y+24 > w ? y+24 : y+24);
+    });
+  }
+
+  // ---------- Meissner ----------
+  let magY = null, magV = 0;
+  function drawMeissner(dt){
+    const {g,w,h} = fit($("meissner"));
+    const m = MATS[sel.value];
+    const sc = isSC(m,T);
+    g.clearRect(0,0,w,h);
+    const plateY = h-62, plateH = 36, plateW = Math.min(420, w*0.5), plateX = w/2-plateW/2;
+    const magW = 110, magH = 36, restY = plateY - magH, floatY = plateY - magH - 70;
+    if (magY === null) magY = restY;
+    const target = sc ? floatY : restY;
+    // spring-damper toward target
+    const k = 60, c = 9;
+    magV += (k*(target-magY) - c*magV)*dt; magY += magV*dt;
+    if (magY > restY){ magY = restY; magV = 0; }
+    const mx = w/2 - magW/2;
+
+    // field lines
+    const cx = w/2, cy = magY + magH/2;
+    g.lineWidth = 1.3;
+    for (let i=-3;i<=3;i++){
+      if (i===0) continue;
+      const s = Math.sign(i), a = Math.abs(i);
+      g.strokeStyle = css("--accent"); g.globalAlpha = 0.55;
+      g.beginPath();
+      g.moveTo(cx + s*magW*0.3, magY + magH);
+      const spread = 40 + a*38;
+      if (sc){
+        // lines deflected sideways, never entering the plate
+        g.bezierCurveTo(cx + s*(magW*0.3+spread*0.4), magY+magH+ (plateY-magY-magH)*0.9,
+                        cx + s*(plateW/2+spread*0.5), plateY-8,
+                        cx + s*(plateW/2+spread), plateY+plateH*0.6);
+      } else {
+        // lines pass straight through the plate
+        g.bezierCurveTo(cx + s*(magW*0.3+spread*0.3), plateY, cx + s*(magW*0.3+spread*0.3), plateY+plateH, cx + s*(magW*0.3+spread*0.1), plateY+plateH+24);
+      }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+    // plate
+    g.fillStyle = sc ? "rgba(14,159,110,0.35)" : "rgba(224,80,43,0.22)";
+    g.strokeStyle = sc ? css("--sc") : css("--hot"); g.lineWidth = 2;
+    g.beginPath(); g.roundRect(plateX, plateY, plateW, plateH, 8); g.fill(); g.stroke();
+    g.fillStyle = css("--ink"); g.font = "12px system-ui"; g.textAlign = "center";
+    g.fillText(sc ? "superconductor, T < Tc  (B inside = 0)" : (m.Tc===null ? "ordinary metal: no Meissner effect" : "normal state, T > Tc  (field penetrates)"), cx, plateY+plateH+18);
+    // magnet
+    g.fillStyle = "#c0392b"; g.fillRect(mx, magY, magW/2, magH);
+    g.fillStyle = "#2c6fd1"; g.fillRect(mx+magW/2, magY, magW/2, magH);
+    g.fillStyle = "#fff"; g.font = "bold 14px system-ui"; g.fillText("N", mx+magW/4, magY+magH/2+5); g.fillText("S", mx+3*magW/4, magY+magH/2+5);
+    if (sc){ g.fillStyle = css("--sc"); g.font="13px system-ui"; g.fillText("levitating", cx, floatY-10); }
+  }
+
+
+  // ---------- Meissner vs perfect conductor ----------
+  function bcOf(m,t){ if(m.Tc===null) return 0; return m.Bc0*Math.max(0,1-(t/m.Tc)*(t/m.Tc)); }
+  function fmtB(b){ return b>=1 ? b.toFixed(2)+" T" : (b*1000).toPrecision(3)+" mT"; }
+  function drawField(id, expel){
+    const {g,w,h} = fit($(id));
+    g.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2, sw=w*0.34, sh=h*0.34, n=11;
+    const m=MATS[sel.value], bApp = parseFloat($("Bslider").value)/100*(m.Bc0||1);
+    const dir = 1;
+    for(let i=0;i<n;i++){
+      const y0 = h*0.08 + (h*0.84)*i/(n-1);
+      const s = y0<cy?-1:1, inside = Math.abs(y0-cy) < sh/2+6;
+      g.strokeStyle=css("--accent"); g.globalAlpha=0.35+0.55*Math.min(1,bApp/(m.Bc0||1)+0.1); g.lineWidth=1.5;
+      g.beginPath();
+      for(let x=0;x<=w;x+=4){
+        let y=y0;
+        if(expel){
+          const bump=Math.exp(-Math.pow((x-cx)/(sw*0.62),2));
+          const target=cy+s*(sh/2+10+Math.abs(y0-cy)*0.35);
+          y = inside ? y0+(target-y0)*bump : y0+(target-y0)*bump*0.35*Math.exp(-Math.abs(y0-cy)/(h*0.25));
+        }
+        x===0?g.moveTo(x,y):g.lineTo(x,y);
+      }
+      g.stroke();
+      // arrow head
+      g.globalAlpha=1; g.fillStyle=css("--accent");
+      g.beginPath(); g.moveTo(w-6,y0); g.lineTo(w-16,y0-4); g.lineTo(w-16,y0+4); g.fill();
+    }
+    g.globalAlpha=1;
+    return {g,w,h,cx,cy,sw,sh};
+  }
+  function drawSlab(c, state){
+    const {g,cx,cy,sw,sh}=c;
+    g.fillStyle = state==="sc" ? "rgba(14,159,110,0.35)" : state==="trap" ? "rgba(183,121,31,0.30)" : "rgba(224,80,43,0.2)";
+    g.strokeStyle = state==="sc" ? css("--sc") : state==="trap" ? css("--warn") : css("--hot"); g.lineWidth=2;
+    g.beginPath(); g.roundRect(cx-sw/2,cy-sh/2,sw,sh,10); g.fill(); g.stroke();
+  }
+  function drawMeissnerCompare(){
+    const m=MATS[sel.value];
+    const bApp = parseFloat($("Bslider").value)/100*(m.Bc0||0);
+    const sc = isSC(m,T);
+    const Bc = bcOf(m,T);
+    const stillSC = sc && bApp <= Bc;         // field low enough to stay superconducting
+    const order = $("order").value;
+    $("Blabel").textContent = m.Tc===null ? "n/a (no superconductor selected)" : fmtB(bApp) + "  (" + $("Bslider").value + "% of Bc0)";
+    $("bcNow").textContent = m.Tc===null ? "–" : (sc ? fmtB(Bc) : "0 (above Tc)");
+
+    // Real superconductor
+    const c1=drawField("fieldSC", stillSC);
+    drawSlab(c1, stillSC ? "sc" : "normal");
+    c1.g.fillStyle=css("--ink"); c1.g.font="12px system-ui"; c1.g.textAlign="center";
+    c1.g.fillText(stillSC ? "Superconductor: field expelled" : (sc ? "B > Bc: superconductivity destroyed, field enters" : "Normal state: field passes through"), c1.cx, c1.h-6);
+    $("bScIn").textContent = stillSC ? "0" : fmtB(bApp);
+    $("scCur").textContent = stillSC && bApp>0 ? "yes (cancel B inside)" : "none";
+
+    // Perfect conductor (R=0 only below Tc, same Tc/critical field for fairness)
+    const pcZero = stillSC;
+    const trapped = pcZero && order==="before";
+    const c2=drawField("fieldPC", pcZero && !trapped);
+    drawSlab(c2, pcZero ? (trapped ? "trap" : "sc") : "normal");
+    c2.g.fillStyle=css("--ink"); c2.g.font="12px system-ui"; c2.g.textAlign="center";
+    c2.g.fillText(!pcZero ? "Normal state: field passes through" : trapped ? "Perfect conductor: flux stays trapped" : "Perfect conductor: field excluded by Lenz's law", c2.cx, c2.h-6);
+    $("bPcIn").textContent = !pcZero ? fmtB(bApp) : trapped ? fmtB(bApp)+" (trapped)" : "0";
+
+    let msg;
+    if (m.Tc===null) msg="Copper has no critical temperature, so there is no Meissner effect. Pick mercury, NbTi or YBCO in part 1.";
+    else if (!sc) msg="Above Tc both materials are ordinary conductors: the field passes straight through. Cool below Tc to see the difference.";
+    else if (!stillSC) msg="The applied field exceeds Bc(T), so superconductivity is destroyed (a \"quench\"). Lower the field or the temperature.";
+    else if (order==="before") msg="Field applied first, then cooled: the superconductor pushes the field out as it crosses Tc (the Meissner effect). The perfect conductor cannot, because nothing changed the flux, so it keeps it trapped. This is the experiment that shows superconductors are not just R = 0.";
+    else msg="Cool first, then apply the field: both materials exclude it, since induced surface currents oppose the change. Switch to \"Apply field first, then cool\" to see the difference.";
+    $("meissExplain").textContent = msg;
+  }
+
+  // ---------- Updates ----------
+  function update(){
+    const m = MATS[sel.value], wr = getWire();
+    const r = rho(m,T), R = r*wr.L/wr.A, V = wr.I*R, P = wr.I*V;
+    $("Tlabel").textContent = T.toFixed(T<10?2:1) + " K";
+    $("sRho").textContent = fmt(r,"Ω·m");
+    $("sR").textContent = fmt(R,"Ω");
+    $("sV").textContent = fmt(V,"V");
+    $("sP").textContent = fmt(P,"W");
+    const st = $("state");
+    if (isSC(m,T)){ st.className="badge sc"; st.textContent="Superconducting (T < Tc)"; }
+    else if (m.Tc !== null){ st.className="badge nm"; st.textContent="Normal state (T > Tc)"; }
+    else { st.className="badge nm"; st.textContent="Ordinary metal (no Tc)"; }
+    const Pcu = wr.I*wr.I*normalRho(MATS.cu,T0)*wr.L/wr.A;
+    $("cuP").textContent = fmt(Pcu,"W");
+    $("cuE").textContent = kwh(Pcu).toLocaleString(undefined,{maximumFractionDigits:1})+" kWh";
+    $("myP").textContent = fmt(P,"W");
+    $("myE").textContent = kwh(P).toLocaleString(undefined,{maximumFractionDigits:1})+" kWh";
+    drawChart(); drawBars(); drawMeissnerCompare();
+  }
+  $("Tslider").addEventListener("input", e => { T = sToT(+e.target.value); update(); });
+  document.querySelectorAll("button[data-T]").forEach(b => b.addEventListener("click", () => {
+    T = +b.dataset.T; $("Tslider").value = tToS(T); update();
+  }));
+  ["mat","L","A","I","order","Bslider"].forEach(id => $(id).addEventListener("input", update));
+  window.addEventListener("resize", update);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
+
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.05, (now-last)/1000); last = now;
+    drawWire(dt); drawMeissner(dt);
+    requestAnimationFrame(loop);
+  }
+  $("Tslider").value = tToS(T);
+  update(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
