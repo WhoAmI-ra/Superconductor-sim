@@ -28,6 +28,7 @@
   input[type=range]{width:100%}
   button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
   button:hover{border-color:var(--accent)}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:800px){.grid2{grid-template-columns:1fr}}
   canvas{width:100%;display:block;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
@@ -39,7 +40,7 @@
   .badge.sc{background:color-mix(in srgb,var(--sc) 20%,transparent);color:var(--sc)}
   .badge.nm{background:color-mix(in srgb,var(--hot) 18%,transparent);color:var(--hot)}
   .note{font-size:.82rem;color:var(--muted);margin-top:10px}
-  code{background:var(--bg);padding:1px 5px;border-radius:5px}
+  .note.warn{color:var(--warn)}
   footer{max-width:1100px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.8rem}
 </style>
 </head>
@@ -50,7 +51,7 @@
 </header>
 
 <main>
-  <!-- Controls -->
+  <!-- 1. Controls -->
   <section class="card">
     <h2>1. Set up your wire</h2>
     <p class="sub">These settings feed every panel below.</p>
@@ -76,18 +77,19 @@
         <button data-T="4.2">Liquid helium (4.2 K)</button>
         <button data-T="77">Liquid nitrogen (77 K)</button>
         <button data-T="293">Room temp (293 K)</button>
-        <span id="state" class="badge"></span>
+        <span id="state" class="badge" role="status" aria-live="polite"></span>
       </div>
+      <p class="note">Liquid helium boils at about 4.2 K, just above mercury's T<sub>c</sub> of 4.15 K, so mercury needs a slightly colder bath to superconduct.</p>
     </div>
   </section>
 
-  <!-- Panel 1: R vs T + wire -->
+  <!-- 2. R vs T + wire -->
   <section class="card">
     <h2>2. Resistance versus temperature</h2>
-    <p class="sub">Normal-state metals follow ρ = ρ₀[1 + α(T − T₀)]; a superconductor drops to ρ = 0 at T<sub>c</sub>. The slider uses a square-root scale so low temperatures are easy to explore.</p>
+    <p class="sub">Above T<sub>c</sub> the normal state is modeled with ρ = ρ₀[1 + α(T − T₀)], a linear approximation that is only reliable near T₀ (OpenStax Sec. 9.3), so the low-temperature part of the curve is illustrative. Below T<sub>c</sub> a superconductor has ρ = 0. The slider uses a square-root scale so low temperatures are easy to explore.</p>
     <div class="grid2">
-      <canvas id="chart" width="560" height="320"></canvas>
-      <canvas id="wire" width="560" height="320"></canvas>
+      <canvas id="chart" width="560" height="320" role="img" aria-label="Graph of resistance versus temperature for the selected wire, with a marker at the current temperature"></canvas>
+      <canvas id="wire" width="560" height="320" role="img" aria-label="Animation of charge carriers drifting through a wire; they scatter and heat the lattice only when resistance is nonzero"></canvas>
     </div>
     <div class="stats">
       <div class="stat"><span>Resistivity ρ</span><b id="sRho">–</b></div>
@@ -98,11 +100,11 @@
     <p class="note">Wire animation: dots are charge carriers drifting with the current. More scattering (a larger ρ) makes them jitter and heat the lattice; at R = 0 they move cleanly.</p>
   </section>
 
-  <!-- Panel 2: Energy comparison -->
+  <!-- 3. Energy comparison -->
   <section class="card">
     <h2>3. Joule heating: your wire vs. copper at room temperature</h2>
     <p class="sub">Same wire size and current. Energy per day is converted to kWh, as on an electricity bill.</p>
-    <canvas id="bars" width="1000" height="200" style="aspect-ratio:1000/200"></canvas>
+    <canvas id="bars" width="1000" height="200" style="aspect-ratio:1000/200" role="img" aria-label="Bar chart comparing power lost in a copper wire at room temperature with the selected wire"></canvas>
     <div class="stats">
       <div class="stat"><span>Copper at 293 K: P</span><b id="cuP">–</b></div>
       <div class="stat"><span>Copper energy per day</span><b id="cuE">–</b></div>
@@ -112,14 +114,15 @@
     <p class="note">Try the defaults (1000 m, 1 cm², 500 A): copper gives R ≈ 0.168 Ω and P ≈ 42 kW, about 1,008 kWh per day, matching the worked example in the report. The refrigeration needed to keep the superconductor cold is not counted here.</p>
   </section>
 
-  <!-- Panel 3: Meissner -->
+  <!-- 4. Meissner levitation -->
   <section class="card">
     <h2>4. Meissner effect: magnetic levitation</h2>
-    <p class="sub">Below T<sub>c</sub> the superconductor expels the magnet's field, so the magnet floats. Warm it above T<sub>c</sub> (use the slider) and it loses levitation. Only works when a superconducting material is selected.</p>
-    <canvas id="meissner" width="1000" height="240" style="aspect-ratio:1000/240"></canvas>
-    <p class="note">Field lines bend around the superconductor because B inside it is zero. This is a qualitative picture, not a force calculation. Real Maglev trains use superconducting magnets aboard the train with guideway coils.</p>
+    <p class="sub">Below T<sub>c</sub> the superconductor excludes the magnet's field, so the magnet floats. Warm it above T<sub>c</sub> (use the slider) and it loses levitation. Only works when a superconducting material is selected.</p>
+    <canvas id="meissner" width="1000" height="240" style="aspect-ratio:1000/240" role="img" aria-label="A magnet levitating above a superconducting plate when cold, resting on it when warm"></canvas>
+    <p class="note">Field lines bend around the superconductor because B inside it is zero. This is a qualitative picture, not a force calculation. OpenStax notes that high-speed trains such as Japan's Yamanashi test line levitate on strong superconducting magnets, eliminating friction with the track.</p>
   </section>
-  <!-- Panel 5: Meissner vs perfect conductor -->
+
+  <!-- 5. Meissner vs perfect conductor -->
   <section class="card">
     <h2>5. Meissner effect vs. a "perfect conductor"</h2>
     <p class="sub">Is a superconductor just a material with R = 0? Test it. Apply a magnetic field and compare a superconductor with a hypothetical perfect conductor (R = 0 only). Uses the material and temperature chosen in part 1.</p>
@@ -135,32 +138,38 @@
       </label>
     </div>
     <div class="grid2" style="margin-top:12px">
-      <div><canvas id="fieldSC" width="500" height="260"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Real superconductor: B inside</span><b id="bScIn">–</b></div><div class="stat"><span>Surface currents</span><b id="scCur">–</b></div></div></div>
-      <div><canvas id="fieldPC" width="500" height="260"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Perfect conductor (R = 0 only): B inside</span><b id="bPcIn">–</b></div><div class="stat"><span>Critical field B<sub>c</sub>(T)</span><b id="bcNow">–</b></div></div></div>
+      <div><canvas id="fieldSC" width="500" height="260" role="img" aria-label="Magnetic field lines around a real superconductor"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Real superconductor: B inside</span><b id="bScIn">–</b></div><div class="stat"><span>Surface currents</span><b id="scCur">–</b></div></div></div>
+      <div><canvas id="fieldPC" width="500" height="260" role="img" aria-label="Magnetic field lines around a hypothetical perfect conductor"></canvas><div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Perfect conductor (R = 0 only): B inside</span><b id="bPcIn">–</b></div><div class="stat"><span>Critical field B<sub>c</sub>(T)</span><b id="bcNow">–</b></div></div></div>
     </div>
     <p class="note" id="meissExplain"></p>
-    <p class="note">Key idea: with R = 0 alone, induced currents can only <i>oppose changes</i> in flux (Lenz's law), so a perfect conductor keeps whatever flux was inside when it was cooled. A superconductor actively expels the field whatever the order, which is the Meissner effect. B<sub>c</sub>(T) ≈ B<sub>c0</sub>[1 − (T/T<sub>c</sub>)²] is a standard approximation; B<sub>c0</sub> values here are illustrative (upper critical field for NbTi and YBCO).</p>
+    <p class="note warn" id="typeNote"></p>
+    <p class="note">Key idea: with R = 0 alone, induced currents can only <i>oppose changes</i> in flux (Lenz's law), so a perfect conductor keeps whatever flux was inside when it was cooled. A superconductor expels the field whatever the order, which is the Meissner effect. B<sub>c</sub>(T) ≈ B<sub>c0</sub>[1 − (T/T<sub>c</sub>)²] is a common approximation (not from OpenStax); B<sub>c0</sub> is the critical field listed in OpenStax Table 9.3 (mercury 0.04 T, NbTi 15 T, YBCO 120 T).</p>
   </section>
 </main>
 
 <footer>
-  Material values are illustrative. Copper uses OpenStax table values (ρ₀ = 1.68×10⁻⁸ Ω·m at 20 °C, α = 3.9×10⁻³ /°C); other normal-state values are rough approximations for demonstration. T<sub>c</sub>: mercury ≈ 4.15 K, NbTi ≈ 9.2 K, YBCO ≈ 92 K.
-  Reference: Ling, S. J., Sanny, J., &amp; Moebs, W. (2016). <i>University physics volume 2</i>. OpenStax. https://openstax.org/books/university-physics-volume-2
+  Material values are illustrative. Copper uses OpenStax Table 9.1 (ρ₀ = 1.68×10⁻⁸ Ω·m at 20 °C, α = 3.9×10⁻³ /°C); other normal-state values are rough approximations for demonstration. T<sub>c</sub> and critical fields from OpenStax Table 9.3: mercury 4.15 K (Type I), NbTi 10 K (Type II), YBCO 92 K (Type II).
+  Reference: Ling, S. J., Moebs, W., &amp; Sanny, J. (2016). <i>University physics volume 2</i>. OpenStax. https://openstax.org/books/university-physics-volume-2
 </footer>
 
 <script>
 (() => {
-  // ---------- Material data ----------
-  // rho0: resistivity at T0=293 K (ohm·m); alpha: 1/K; Tc: critical temp (null = not superconducting)
+  // rho0: resistivity at T0 = 293 K (ohm·m); alpha: 1/K; Tc: critical temp (null = not superconducting)
+  // Bc0: critical field (T) and type from OpenStax Table 9.3
   const MATS = {
     cu:   {name:"Copper (ordinary metal)",        rho0:1.68e-8, alpha:3.9e-3,  Tc:null},
-    hg:   {name:"Mercury (Tc ≈ 4.15 K)",          rho0:9.6e-7,  alpha:0.9e-3,  Tc:4.15, Bc0:0.041},
-    nbti: {name:"Niobium–titanium (Tc ≈ 9.2 K)",  rho0:6.0e-7,  alpha:0.3e-3,  Tc:9.2, Bc0:14},
-    ybco: {name:"YBCO ceramic (Tc ≈ 92 K)",       rho0:4.0e-6,  alpha:1.0e-3,  Tc:92, Bc0:100}
+    hg:   {name:"Mercury (Tc = 4.15 K, Type I)",  rho0:9.6e-7,  alpha:0.9e-3,  Tc:4.15, Bc0:0.04, type:"I"},
+    nbti: {name:"Niobium–titanium (Tc = 10 K, Type II)", rho0:6.0e-7, alpha:0.3e-3, Tc:10, Bc0:15, type:"II"},
+    ybco: {name:"YBCO ceramic (Tc = 92 K, Type II)",     rho0:4.0e-6, alpha:1.0e-3, Tc:92, Bc0:120, type:"II"}
   };
-  const T0 = 293, TMIN = 1, TMAX = 300, RESID = 0.02; // residual fraction of rho0 at very low T
+  const T0 = 293, TMIN = 1, TMAX = 300, RESID = 0.02;
   const $ = id => document.getElementById(id);
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  // roundRect fallback for older browsers
+  if (!CanvasRenderingContext2D.prototype.roundRect){
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h){ this.rect(x,y,w,h); };
+  }
 
   const sel = $("mat");
   for (const k in MATS){ const o=document.createElement("option"); o.value=k; o.textContent=MATS[k].name; sel.appendChild(o); }
@@ -170,14 +179,8 @@
   const sToT = s => TMIN + (TMAX-TMIN) * Math.pow(s/1000, 2);
   const tToS = t => 1000 * Math.sqrt((t-TMIN)/(TMAX-TMIN));
 
-  function normalRho(m, t){
-    const r = m.rho0 * (1 + m.alpha*(t - T0));
-    return Math.max(r, m.rho0*RESID);
-  }
-  function rho(m, t){
-    if (m.Tc !== null && t < m.Tc) return 0;
-    return normalRho(m, t);
-  }
+  function normalRho(m, t){ return Math.max(m.rho0 * (1 + m.alpha*(t - T0)), m.rho0*RESID); }
+  function rho(m, t){ return (m.Tc !== null && t < m.Tc) ? 0 : normalRho(m, t); }
   const isSC = (m,t) => m.Tc !== null && t < m.Tc;
 
   function getWire(){
@@ -189,9 +192,8 @@
     for (const [f,p] of pre){ if (Math.abs(x) >= f) return (x/f).toPrecision(3) + " " + p + unit; }
     return x.toExponential(2) + " " + unit;
   }
-  const kwh = (P) => P*24/1000;
+  const kwh = P => P*24/1000;
 
-  // ---------- Canvas helpers ----------
   function fit(c){
     const dpr = Math.min(window.devicePixelRatio||1, 2);
     const w = c.clientWidth, h = c.clientHeight || (c.height/c.width*w);
@@ -231,13 +233,11 @@
     g.fillText("Temperature T (K)", pad.l+pw/2, h-6);
     g.save(); g.translate(12, pad.t+ph/2); g.rotate(-Math.PI/2); g.fillText("Resistance R", 0, 0); g.restore();
 
-    // Tc marker
     if (m.Tc !== null){
       const x = X(m.Tc);
       g.setLineDash([4,4]); g.strokeStyle = css("--sc"); g.beginPath(); g.moveTo(x,pad.t); g.lineTo(x,pad.t+ph); g.stroke(); g.setLineDash([]);
       g.fillStyle = css("--sc"); g.textAlign="left"; g.fillText("Tc = "+m.Tc+" K", x+4, pad.t+12);
     }
-    // curve
     g.strokeStyle = css("--accent"); g.lineWidth = 2.4; g.beginPath();
     let started = false, prev = null;
     for (let t=TMIN;t<=TMAX;t+=0.25){
@@ -248,10 +248,8 @@
       prev = r;
     }
     g.stroke();
-    // current point
-    const cx = X(T), cy = Y(Rof(T));
     g.fillStyle = isSC(m,T) ? css("--sc") : css("--hot");
-    g.beginPath(); g.arc(cx,cy,6,0,7); g.fill();
+    g.beginPath(); g.arc(X(T),Y(Rof(T)),6,0,7); g.fill();
   }
 
   // ---------- Wire animation ----------
@@ -263,13 +261,11 @@
     const sc = isSC(m,T);
     g.clearRect(0,0,w,h);
     const x0=24, x1=w-24, y0=h*0.22, y1=h*0.78;
-    // heat glow
     const heat = Math.min(1, Math.log10(1+P)/5);
     g.fillStyle = sc ? "rgba(14,159,110,0.15)" : `rgba(224,80,43,${0.12+0.5*heat})`;
     g.strokeStyle = sc ? css("--sc") : css("--hot"); g.lineWidth = 2;
     g.beginPath(); g.roundRect(x0,y0,x1-x0,y1-y0,14); g.fill(); g.stroke();
 
-    // lattice ions (vibration ~ T and heat)
     const amp = sc ? 0.6 : 1 + 4*Math.sqrt(T/300) + 3*heat;
     g.fillStyle = css("--muted");
     const t = performance.now()/1000;
@@ -279,7 +275,6 @@
       g.arc(bx + Math.sin(t*9+i*1.7+j)*amp, by + Math.cos(t*8+i+j*2.3)*amp, 6, 0, 7);
       g.globalAlpha = 0.35; g.fill(); g.globalAlpha = 1;
     }
-    // carriers
     const speed = 0.12 * Math.min(2, 0.3 + wr.I/500);
     const jit = sc ? 0 : Math.min(9, 1.5 + 14*Math.log10(1 + r/1e-8)/3);
     g.fillStyle = css("--accent");
@@ -290,7 +285,6 @@
       const py = y0 + 10 + c.y*(y1-y0-20) + (jit? Math.cos(c.ph)*jit : 0);
       g.beginPath(); g.arc(px,py,3.2,0,7); g.fill();
     }
-    // arrow + labels
     g.fillStyle = css("--ink"); g.font = "12px system-ui"; g.textAlign = "left";
     g.fillText("conventional current I →", x0, y0-8);
     g.textAlign = "right";
@@ -308,14 +302,17 @@
     const rows = [["Copper, 293 K", Pcu, css("--hot")], [m.name.split(" (")[0]+", "+T.toFixed(T<10?1:0)+" K", Pme, isSC(m,T)?css("--sc"):css("--warn")]];
     g.font = "13px system-ui";
     rows.forEach((r,i)=>{
-      const y = 24 + i*70, bw = Math.max(w-190-300, 60)*r[1]/max;
+      const y = 24 + i*70;
+      const label = fmt(r[1],"W")+"  ("+kwh(r[1]).toLocaleString(undefined,{maximumFractionDigits:1})+" kWh/day)";
+      const maxBar = Math.max(w - 190 - g.measureText(label).width - 24, 20);   // keep the label on the canvas
+      const bw = Math.max(maxBar*r[1]/max, 2);
       g.fillStyle = css("--ink"); g.textAlign = "left"; g.fillText(r[0], 8, y+22);
-      g.fillStyle = r[2]; g.fillRect(190, y, Math.max(bw,2), 38);
-      g.fillStyle = css("--ink"); g.fillText(fmt(r[1],"W")+"  ("+kwh(r[1]).toLocaleString(undefined,{maximumFractionDigits:1})+" kWh/day)", 190+Math.max(bw,2)+8, y+24 > w ? y+24 : y+24);
+      g.fillStyle = r[2]; g.fillRect(190, y, bw, 38);
+      g.fillStyle = css("--ink"); g.fillText(label, 190+bw+8, y+24);
     });
   }
 
-  // ---------- Meissner ----------
+  // ---------- Meissner levitation ----------
   let magY = null, magV = 0;
   function drawMeissner(dt){
     const {g,w,h} = fit($("meissner"));
@@ -326,14 +323,12 @@
     const magW = 110, magH = 36, restY = plateY - magH, floatY = plateY - magH - 70;
     if (magY === null) magY = restY;
     const target = sc ? floatY : restY;
-    // spring-damper toward target
     const k = 60, c = 9;
     magV += (k*(target-magY) - c*magV)*dt; magY += magV*dt;
     if (magY > restY){ magY = restY; magV = 0; }
     const mx = w/2 - magW/2;
 
-    // field lines
-    const cx = w/2, cy = magY + magH/2;
+    const cx = w/2;
     g.lineWidth = 1.3;
     for (let i=-3;i<=3;i++){
       if (i===0) continue;
@@ -343,30 +338,25 @@
       g.moveTo(cx + s*magW*0.3, magY + magH);
       const spread = 40 + a*38;
       if (sc){
-        // lines deflected sideways, never entering the plate
         g.bezierCurveTo(cx + s*(magW*0.3+spread*0.4), magY+magH+ (plateY-magY-magH)*0.9,
                         cx + s*(plateW/2+spread*0.5), plateY-8,
                         cx + s*(plateW/2+spread), plateY+plateH*0.6);
       } else {
-        // lines pass straight through the plate
         g.bezierCurveTo(cx + s*(magW*0.3+spread*0.3), plateY, cx + s*(magW*0.3+spread*0.3), plateY+plateH, cx + s*(magW*0.3+spread*0.1), plateY+plateH+24);
       }
       g.stroke();
     }
     g.globalAlpha = 1;
-    // plate
     g.fillStyle = sc ? "rgba(14,159,110,0.35)" : "rgba(224,80,43,0.22)";
     g.strokeStyle = sc ? css("--sc") : css("--hot"); g.lineWidth = 2;
     g.beginPath(); g.roundRect(plateX, plateY, plateW, plateH, 8); g.fill(); g.stroke();
     g.fillStyle = css("--ink"); g.font = "12px system-ui"; g.textAlign = "center";
     g.fillText(sc ? "superconductor, T < Tc  (B inside = 0)" : (m.Tc===null ? "ordinary metal: no Meissner effect" : "normal state, T > Tc  (field penetrates)"), cx, plateY+plateH+18);
-    // magnet
     g.fillStyle = "#c0392b"; g.fillRect(mx, magY, magW/2, magH);
     g.fillStyle = "#2c6fd1"; g.fillRect(mx+magW/2, magY, magW/2, magH);
     g.fillStyle = "#fff"; g.font = "bold 14px system-ui"; g.fillText("N", mx+magW/4, magY+magH/2+5); g.fillText("S", mx+3*magW/4, magY+magH/2+5);
     if (sc){ g.fillStyle = css("--sc"); g.font="13px system-ui"; g.fillText("levitating", cx, floatY-10); }
   }
-
 
   // ---------- Meissner vs perfect conductor ----------
   function bcOf(m,t){ if(m.Tc===null) return 0; return m.Bc0*Math.max(0,1-(t/m.Tc)*(t/m.Tc)); }
@@ -376,7 +366,6 @@
     g.clearRect(0,0,w,h);
     const cx=w/2, cy=h/2, sw=w*0.34, sh=h*0.34, n=11;
     const m=MATS[sel.value], bApp = parseFloat($("Bslider").value)/100*(m.Bc0||1);
-    const dir = 1;
     for(let i=0;i<n;i++){
       const y0 = h*0.08 + (h*0.84)*i/(n-1);
       const s = y0<cy?-1:1, inside = Math.abs(y0-cy) < sh/2+6;
@@ -392,7 +381,6 @@
         x===0?g.moveTo(x,y):g.lineTo(x,y);
       }
       g.stroke();
-      // arrow head
       g.globalAlpha=1; g.fillStyle=css("--accent");
       g.beginPath(); g.moveTo(w-6,y0); g.lineTo(w-16,y0-4); g.lineTo(w-16,y0+4); g.fill();
     }
@@ -410,12 +398,11 @@
     const bApp = parseFloat($("Bslider").value)/100*(m.Bc0||0);
     const sc = isSC(m,T);
     const Bc = bcOf(m,T);
-    const stillSC = sc && bApp <= Bc;         // field low enough to stay superconducting
+    const stillSC = sc && bApp <= Bc;
     const order = $("order").value;
     $("Blabel").textContent = m.Tc===null ? "n/a (no superconductor selected)" : fmtB(bApp) + "  (" + $("Bslider").value + "% of Bc0)";
     $("bcNow").textContent = m.Tc===null ? "–" : (sc ? fmtB(Bc) : "0 (above Tc)");
 
-    // Real superconductor
     const c1=drawField("fieldSC", stillSC);
     drawSlab(c1, stillSC ? "sc" : "normal");
     c1.g.fillStyle=css("--ink"); c1.g.font="12px system-ui"; c1.g.textAlign="center";
@@ -423,7 +410,6 @@
     $("bScIn").textContent = stillSC ? "0" : fmtB(bApp);
     $("scCur").textContent = stillSC && bApp>0 ? "yes (cancel B inside)" : "none";
 
-    // Perfect conductor (R=0 only below Tc, same Tc/critical field for fairness)
     const pcZero = stillSC;
     const trapped = pcZero && order==="before";
     const c2=drawField("fieldPC", pcZero && !trapped);
@@ -439,6 +425,9 @@
     else if (order==="before") msg="Field applied first, then cooled: the superconductor pushes the field out as it crosses Tc (the Meissner effect). The perfect conductor cannot, because nothing changed the flux, so it keeps it trapped. This is the experiment that shows superconductors are not just R = 0.";
     else msg="Cool first, then apply the field: both materials exclude it, since induced surface currents oppose the change. Switch to \"Apply field first, then cool\" to see the difference.";
     $("meissExplain").textContent = msg;
+    $("typeNote").textContent = (m.type==="II" && sc)
+      ? "Type II caveat: this panel shows the idealized picture (complete expulsion up to the critical field), which OpenStax describes for Type I. Type II materials such as " + (sel.value==="nbti"?"NbTi":"YBCO") + " can let some field penetrate before superconductivity is lost; that refinement is beyond Sec. 9.6. Choose mercury for the cleanest Type I example."
+      : "";
   }
 
   // ---------- Updates ----------
